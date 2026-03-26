@@ -1,0 +1,20 @@
+image:
+  repository: buggy-node-app
+  tag: "1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi    # Intentionally low — memory leak will hit this
+
+service:
+  type: ClusterIP
+  port: 3000
+
+namespace: buggy-app

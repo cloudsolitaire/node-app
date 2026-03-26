@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: buggy-node-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: buggy-node-app
+    release: kube-prometheus    # must match your kube-prometheus-stack release label
+spec:
+  selector:
+    matchLabels:
+      app: buggy-node-app
+  endpoints:
+    - port: "3000"
+      path: /metrics
+      interval: 15s
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.namespace }}

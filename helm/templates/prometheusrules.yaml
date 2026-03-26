@@ -1,0 +1,89 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: buggy-node-app-alerts
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: buggy-node-app
+    release: kube-prometheus
+spec:
+  groups:
+    # ── High Error Rate (triggers from BUG 2, 4, 5) ─────────────────
+    - name: buggy-node-app.errors
+      rules:
+        - alert: BuggyAppHighErrorRate
+          expr: |
+            sum(rate(app_errors_total{job="buggy-node-app"}[5m])) > 0.1
+          for: 2m
+          labels:
+            severity: critical
+            namespace: {{ .Values.namespace }}
+            service: buggy-node-app
+          annotations:
+            summary: "High error rate on buggy-node-app"
+            description: "Error rate is {{ "{{ $value }}" }} errors/sec over the last 5 minutes."
+
+    # ── High 5xx Rate (triggers from BUG 2, 3, 4) ───────────────────
+    - name: buggy-node-app.http
+      rules:
+        - alert: BuggyAppHigh5xxRate
+          expr: |
+            sum(rate(http_requests_total{job="buggy-node-app", status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="buggy-node-app"}[5m]))
+            > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            namespace: {{ .Values.namespace }}
+            service: buggy-node-app
+          annotations:
+            summary: "High 5xx rate on buggy-node-app"
+            description: "{{ "{{ $value | humanizePercentage }}" }} of requests are returning 5xx."
+
+    # ── Slow Responses (triggers from BUG 3, 6) ─────────────────────
+    - name: buggy-node-app.latency
+      rules:
+        - alert: BuggyAppHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{job="buggy-node-app"}[5m])) by (le)
+            ) > 2
+          for: 2m
+          labels:
+            severity: warning
+            namespace: {{ .Values.namespace }}
+            service: buggy-node-app
+          annotations:
+            summary: "P95 latency above 2s on buggy-node-app"
+            description: "P95 response time is {{ "{{ $value }}" }}s."
+
+    # ── Memory Leak (triggers from BUG 1) ────────────────────────────
+    - name: buggy-node-app.memory
+      rules:
+        - alert: BuggyAppMemoryLeak
+          expr: |
+            app_memory_leak_bytes{job="buggy-node-app"} > 50000000
+          for: 1m
+          labels:
+            severity: critical
+            namespace: {{ .Values.namespace }}
+            service: buggy-node-app
+          annotations:
+            summary: "Memory leak detected in buggy-node-app"
+            description: "Leak array is {{ "{{ $value | humanize1024 }}" }}B and growing."
+
+    # ── Pod Restarts (triggers from BUG 5 — unhandled rejection crash)
+    - name: buggy-node-app.restarts
+      rules:
+        - alert: BuggyAppFrequentRestarts
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="{{ .Values.namespace }}", container="app"}[15m]) > 3
+          for: 1m
+          labels:
+            severity: critical
+            namespace: {{ .Values.namespace }}
+            service: buggy-node-app
+          annotations:
+            summary: "buggy-node-app is restarting frequently"
+            description: "Pod has restarted {{ "{{ $value }}" }} times in the last 15 minutes."

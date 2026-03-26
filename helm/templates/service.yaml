@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: buggy-node-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: buggy-node-app
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: buggy-node-app
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 3000
+      protocol: TCP

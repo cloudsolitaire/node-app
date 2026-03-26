@@ -1,0 +1,14 @@
+{
+  "name": "buggy-node-app",
+  "version": "1.0.0",
+  "description": "Intentionally buggy Node.js app for testing incident agent",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "winston": "^3.11.0",
+    "prom-client": "^15.1.0"
+  }
+}
