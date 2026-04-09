@@ -114,6 +114,7 @@ resource "kubernetes_service" "buggy_node_app" {
     }
 
     port {
+      name        = "http"
       port        = var.service_port
       target_port = 3000
       protocol    = "TCP"
@@ -143,7 +144,7 @@ resource "kubernetes_manifest" "service_monitor" {
         }
       }
       endpoints = [{
-        port     = "3000"
+        port     = "http"
         path     = "/metrics"
         interval = "15s"
       }]
