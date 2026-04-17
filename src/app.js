@@ -178,6 +178,31 @@ app.post("/api/notifications", (req, res) => {
   res.json({ status: "queued" });
 });
 
+// GET /api/reports/:type
+// BUG 7: Null pointer — accesses property on a null object.
+// Every call throws TypeError and returns 500.
+app.get("/api/reports/:type", (req, res) => {
+  try {
+    logger.info("Generating report", { reportType: req.params.type });
+
+    // BUG 7: config is null, accessing .reports throws
+    // "TypeError: Cannot read properties of null (reading 'reports')"
+    const config = null;
+    const templateId = config.reports[req.params.type].templateId;
+
+    res.json({ templateId });
+  } catch (err) {
+    logger.error("Failed to generate report", {
+      error: err.message,
+      stack: err.stack,
+      reportType: req.params.type,
+      endpoint: "/api/reports/:type",
+    });
+    errorTotal.inc({ type: "report_generation_error", endpoint: "/api/reports/:type" });
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /api/cpu-burn
 // BUG 6: CPU-intensive sync operation blocks the event loop.
 // Simulates a badly written algorithm that pegs CPU at 100%.
