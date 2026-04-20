@@ -197,10 +197,36 @@ app.get("/api/reports/:type", (req, res) => {
       stack: err.stack,
       reportType: req.params.type,
       endpoint: "/api/reports/:type",
+      statusCode: 500,
     });
     errorTotal.inc({ type: "report_generation_error", endpoint: "/api/reports/:type" });
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+// GET /api/gateway/:service
+// BUG 8: Upstream service unreachable — returns 502 Bad Gateway.
+// Simulates a dependency outage where our service can't reach upstream.
+app.get("/api/gateway/:service", (req, res) => {
+  const service = req.params.service;
+  const upstreamUrl = `http://${service}.internal.svc.cluster.local:8080/api`;
+
+  logger.info("Proxying request to upstream", { service, upstreamUrl });
+
+  // BUG 8: Upstream is always unreachable
+  const err = new Error(`ECONNREFUSED: connect ECONNREFUSED ${upstreamUrl}`);
+  err.code = "ECONNREFUSED";
+
+  logger.error("Upstream service unreachable", {
+    error: err.message,
+    code: err.code,
+    service,
+    upstreamUrl,
+    statusCode: 502,
+    endpoint: "/api/gateway/:service",
+  });
+  errorTotal.inc({ type: "upstream_unreachable", endpoint: "/api/gateway/:service" });
+  res.status(502).json({ error: "Bad Gateway", upstream: service, code: "ECONNREFUSED" });
 });
 
 // GET /api/cpu-burn
